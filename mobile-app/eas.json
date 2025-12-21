@@ -13,6 +13,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_BASE_URL": "https://suvichar-5ybokjbtd-gaurav200247s-projects.vercel.app"
       }
@@ -22,10 +25,18 @@
       "env": {
         "EXPO_PUBLIC_BASE_URL": "https://suvichar-5ybokjbtd-gaurav200247s-projects.vercel.app"
       }
+    },
+    "production-apk": {
+      "autoIncrement": false,
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_BASE_URL": "https://suvichar-5ybokjbtd-gaurav200247s-projects.vercel.app"
+      }
     }
   },
   "submit": {
     "production": {}
   }
 }
-
