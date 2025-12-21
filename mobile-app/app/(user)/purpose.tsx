@@ -6,12 +6,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Briefcase, Check, ArrowRight } from 'lucide-react-native';
+import { User, Briefcase, ArrowRight } from 'lucide-react-native';
 import { useRouter, Href } from 'expo-router';
 import { useGetUserProfileQuery, useUpdateProfileMutation } from '../../store/api/userApi';
 import { useAppDispatch } from '../../store/hooks';
 import { setProfileSetupComplete } from '../../store/slices/authSlice';
 import { useTheme } from '../../context/ThemeContext';
+import { OptionCard } from '../../components';
 
 type AccountType = 'personal' | 'business';
 
@@ -31,14 +32,14 @@ export default function PurposeScreen() {
   useEffect(() => {
     if (!isLoadingProfile && profileData?.user) {
       const user = profileData.user;
-      
+
       // If user has name set, profile is complete - skip to home
       if (user.name && user.name.trim() !== '') {
         dispatch(setProfileSetupComplete());
         router.replace('/(user)' as Href);
         return;
       }
-      
+
       setIsCheckingProfile(false);
     }
   }, [isLoadingProfile, profileData, dispatch, router]);
@@ -63,80 +64,6 @@ export default function PurposeScreen() {
     } catch (err: any) {
       setError(err?.data?.message || 'Failed to set account type');
     }
-  };
-
-  const OptionCard = ({
-    type,
-    title,
-    description,
-    icon: Icon,
-  }: {
-    type: AccountType;
-    title: string;
-    description: string;
-    icon: typeof User;
-  }) => {
-    const isSelected = selectedType === type;
-
-    return (
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedType(type);
-          setError('');
-        }}
-        className="p-5 rounded-2xl mb-4"
-        style={{
-          backgroundColor: isDark ? '#1a1a1a' : '#fff',
-          borderWidth: 2,
-          borderColor: isSelected
-            ? isDark ? '#fff' : '#000'
-            : isDark ? '#2a2a2a' : '#e5e5e5',
-        }}
-      >
-        <View className="flex-row items-start">
-          <View
-            className="w-12 h-12 rounded-xl items-center justify-center mr-4"
-            style={{
-              backgroundColor: isSelected
-                ? isDark ? '#fff' : '#000'
-                : isDark ? '#2a2a2a' : '#f5f5f5',
-            }}
-          >
-            <Icon
-              size={22}
-              color={isSelected ? (isDark ? '#000' : '#fff') : (isDark ? '#888' : '#666')}
-            />
-          </View>
-
-          <View className="flex-1">
-            <View className="flex-row items-center justify-between">
-              <Text
-                className="text-lg font-semibold mb-1"
-                style={{ color: isDark ? '#fff' : '#000' }}
-              >
-                {title}
-              </Text>
-
-              {isSelected && (
-                <View
-                  className="w-6 h-6 rounded-full items-center justify-center"
-                  style={{ backgroundColor: isDark ? '#fff' : '#000' }}
-                >
-                  <Check size={14} color={isDark ? '#000' : '#fff'} />
-                </View>
-              )}
-            </View>
-
-            <Text
-              className="text-sm"
-              style={{ color: isDark ? '#888' : '#666' }}
-            >
-              {description}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   // Show loading while checking profile
@@ -199,6 +126,12 @@ export default function PurposeScreen() {
             title="Personal"
             description="For personal quotes, inspiration, and sharing with friends"
             icon={User}
+            isSelected={selectedType === 'personal'}
+            onSelect={() => {
+              setSelectedType('personal');
+              setError('');
+            }}
+            isDark={isDark}
           />
 
           <OptionCard
@@ -206,6 +139,12 @@ export default function PurposeScreen() {
             title="Business"
             description="For professional branding, marketing, and client work"
             icon={Briefcase}
+            isSelected={selectedType === 'business'}
+            onSelect={() => {
+              setSelectedType('business');
+              setError('');
+            }}
+            isDark={isDark}
           />
         </View>
 
@@ -236,8 +175,12 @@ export default function PurposeScreen() {
           className="flex-row items-center justify-center py-4 rounded-xl"
           style={{
             backgroundColor: selectedType
-              ? isDark ? '#fff' : '#000'
-              : isDark ? '#1a1a1a' : '#e5e5e5',
+              ? isDark
+                ? '#fff'
+                : '#000'
+              : isDark
+              ? '#1a1a1a'
+              : '#e5e5e5',
           }}
         >
           {isLoading ? (
@@ -248,28 +191,26 @@ export default function PurposeScreen() {
                 className="text-base font-semibold mr-2"
                 style={{
                   color: selectedType
-                    ? isDark ? '#000' : '#fff'
-                    : isDark ? '#555' : '#aaa',
+                    ? isDark
+                      ? '#000'
+                      : '#fff'
+                    : isDark
+                    ? '#555'
+                    : '#aaa',
                 }}
               >
                 Continue
               </Text>
               <ArrowRight
                 size={20}
-                color={selectedType ? (isDark ? '#000' : '#fff') : (isDark ? '#555' : '#aaa')}
+                color={selectedType ? (isDark ? '#000' : '#fff') : isDark ? '#555' : '#aaa'}
               />
             </>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleSkip}
-          className="py-3 items-center mt-2"
-        >
-          <Text
-            className="text-sm"
-            style={{ color: isDark ? '#666' : '#888' }}
-          >
+        <TouchableOpacity onPress={handleSkip} className="py-3 items-center mt-2">
+          <Text className="text-sm" style={{ color: isDark ? '#666' : '#888' }}>
             I'll do this later
           </Text>
         </TouchableOpacity>
@@ -277,4 +218,3 @@ export default function PurposeScreen() {
     </SafeAreaView>
   );
 }
-

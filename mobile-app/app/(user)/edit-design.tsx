@@ -8,114 +8,59 @@ import {
   ScrollView,
   Switch,
   Animated,
-  Easing,
-  Pressable,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Camera, Lock, Crown, Sparkles, User, Mail, Phone, Building2, ChevronRight } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Camera,
+  Crown,
+  Sparkles,
+  User,
+  Mail,
+  Phone,
+  Building2,
+  ChevronRight,
+  Globe,
+  MapPin,
+  FileText,
+  Move,
+  Type,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SecureStore from 'expo-secure-store';
 import * as ImagePicker from 'expo-image-picker';
 import { useGetUserProfileQuery, useUpdateProfileMutation } from '../../store/api/userApi';
 import { useTheme } from '../../context/ThemeContext';
+import { AnimatedButton, AnimatedCard, LockedField } from '../../components';
 
 // Storage key for showDate preference
 const SHOW_DATE_KEY = 'quote_show_date';
 
-// Animated Button Component
-const AnimatedButton = ({ 
-  onPress, 
-  children, 
-  style,
-  disabled = false,
-}: { 
-  onPress: () => void; 
-  children: React.ReactNode; 
-  style?: any;
-  disabled?: boolean;
-}) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+// ========================================
+// PREMIUM TOGGLE - Change this to showcase premium features to stakeholders
+// Set to true to show premium features as unlocked
+// Set to false to show locked premium features (default user experience)
+// ========================================
+const IS_PREMIUM_ENABLED = false;
 
-  const handlePressIn = () => {
-    if (disabled) return;
-    Animated.spring(scaleAnim, {
-      toValue: 0.97,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
-  };
+// Position types for premium positioning feature
+type PositionType = 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
-  };
-
-  return (
-    <Pressable 
-      onPress={onPress} 
-      onPressIn={handlePressIn} 
-      onPressOut={handlePressOut}
-      disabled={disabled}
-    >
-      <Animated.View 
-        style={[style, { transform: [{ scale: scaleAnim }], opacity: disabled ? 0.6 : 1 }]} 
-      >
-        {children}
-      </Animated.View>
-    </Pressable>
-  );
-};
-
-// Animated Card with staggered entrance
-const AnimatedCard = ({ 
-  children, 
-  delay = 0, 
-  style 
-}: { 
-  children: React.ReactNode; 
-  delay?: number; 
-  style?: any;
-}) => {
-  const translateY = useRef(new Animated.Value(20)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 400,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 350,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={[{ transform: [{ translateY }], opacity }, style]}>
-      {children}
-    </Animated.View>
-  );
-};
+const POSITION_OPTIONS: { value: PositionType; label: string }[] = [
+  { value: 'center', label: 'Center' },
+  { value: 'top-left', label: 'Top Left' },
+  { value: 'top-right', label: 'Top Right' },
+  { value: 'bottom-left', label: 'Bottom Left' },
+  { value: 'bottom-right', label: 'Bottom Right' },
+];
 
 export default function EditDesignScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
-  
+
   const [activeTab, setActiveTab] = useState<'personal' | 'business'>('personal');
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -127,13 +72,27 @@ export default function EditDesignScreen() {
   const [showDate, setShowDate] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Premium fields - Personal tab
+  const [aboutMe, setAboutMe] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [website, setWebsite] = useState('');
+
+  // Premium fields - Business tab
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
+
+  // Premium fields - Position controls (both tabs)
+  const [nameOverlayPosition, setNameOverlayPosition] = useState<PositionType>('center');
+  const [avatarPosition, setAvatarPosition] = useState<PositionType>('bottom-left');
+
   // API hooks
   const { data: profileData, isLoading: isLoadingProfile } = useGetUserProfileQuery();
   const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
 
   // Tab animation
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Pulsing glow animation for photo frame in preview
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
@@ -141,7 +100,6 @@ export default function EditDesignScreen() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load showDate preference from SecureStore
         const storedShowDate = await SecureStore.getItemAsync(SHOW_DATE_KEY);
         if (storedShowDate !== null) {
           setShowDate(storedShowDate === 'true');
@@ -150,7 +108,6 @@ export default function EditDesignScreen() {
         console.error('Error loading showDate preference:', error);
       }
     };
-    
     loadData();
   }, []);
 
@@ -174,9 +131,9 @@ export default function EditDesignScreen() {
       tension: 300,
       friction: 20,
     }).start();
-  }, [activeTab]);
+  }, [activeTab, tabIndicatorAnim]);
 
-  // Start pulsing glow animation for photo frame in preview
+  // Start pulsing glow animation
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
@@ -203,10 +160,8 @@ export default function EditDesignScreen() {
     }
 
     try {
-      // Save showDate preference to SecureStore
       await SecureStore.setItemAsync(SHOW_DATE_KEY, showDate.toString());
 
-      // Call update profile API
       const result = await updateProfile({
         name: name.trim(),
         profileImage: newPhoto || undefined,
@@ -215,7 +170,7 @@ export default function EditDesignScreen() {
 
       if (!result.error) {
         Alert.alert('Success', 'Your design settings have been saved!', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       }
     } catch (error: any) {
@@ -242,7 +197,6 @@ export default function EditDesignScreen() {
 
   const pickImage = async (source: 'camera' | 'gallery') => {
     try {
-      // Request permissions
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
@@ -257,20 +211,20 @@ export default function EditDesignScreen() {
         }
       }
 
-      // Launch picker
-      const result = source === 'camera'
-        ? await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
+      const result =
+        source === 'camera'
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
@@ -305,97 +259,124 @@ export default function EditDesignScreen() {
     premium: '#F59E0B',
   };
 
-  const LockedField = ({ 
+  // Helper function to get position styles for name overlay
+  const getNameOverlayPositionStyle = (position: PositionType) => {
+    const baseStyle = { position: 'absolute' as const };
+    switch (position) {
+      case 'center':
+        return { ...baseStyle, top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center' as const, justifyContent: 'center' as const };
+      case 'top-left':
+        return { ...baseStyle, top: 50, left: 16, alignItems: 'flex-start' as const };
+      case 'top-right':
+        return { ...baseStyle, top: 50, right: 16, alignItems: 'flex-end' as const };
+      case 'bottom-left':
+        return { ...baseStyle, bottom: 70, left: 16, alignItems: 'flex-start' as const };
+      case 'bottom-right':
+        return { ...baseStyle, bottom: 70, right: 16, alignItems: 'flex-end' as const };
+      default:
+        return { ...baseStyle, top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center' as const, justifyContent: 'center' as const };
+    }
+  };
+
+  // Helper function to get position styles for avatar
+  const getAvatarPositionStyle = (position: PositionType) => {
+    const baseStyle = { position: 'absolute' as const };
+    switch (position) {
+      case 'center':
+        return { ...baseStyle, top: '50%' as any, left: '50%' as any, transform: [{ translateX: -20 }, { translateY: -20 }] };
+      case 'top-left':
+        return { ...baseStyle, top: 16, left: 16 };
+      case 'top-right':
+        return { ...baseStyle, top: 16, right: 16 };
+      case 'bottom-left':
+        return { ...baseStyle, bottom: 16, left: 16 };
+      case 'bottom-right':
+        return { ...baseStyle, bottom: 16, right: 16 };
+      default:
+        return { ...baseStyle, bottom: 16, left: 16 };
+    }
+  };
+
+  // Position Selector Component
+  const PositionSelector = ({ 
     label, 
-    description, 
-    icon: Icon,
-    delay = 0,
+    icon: Icon, 
+    value, 
+    onChange 
   }: { 
     label: string; 
-    description: string;
-    icon: any;
-    delay?: number;
+    icon: any; 
+    value: PositionType; 
+    onChange: (pos: PositionType) => void;
   }) => (
-    <AnimatedCard delay={delay}>
-      <AnimatedButton onPress={handleUpgradeToPremium}>
+    <View
+      style={{
+        backgroundColor: colors.card,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(34, 197, 94, 0.3)',
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <View
           style={{
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: 'rgba(245, 158, 11, 0.3)',
-            marginBottom: 12,
-            overflow: 'hidden',
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            backgroundColor: 'rgba(34, 197, 94, 0.15)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 10,
           }}
         >
-          {/* Premium gradient overlay */}
-          <LinearGradient
-            colors={['rgba(245, 158, 11, 0.08)', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            }}
-          />
-          
-          <View style={{ padding: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: 14,
-                }}
-              >
-                <Icon size={22} color={colors.premium} />
-              </View>
-              
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, marginRight: 8 }}>
-                    {label}
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 20,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Lock size={10} color={colors.premium} />
-                    <Text style={{ fontSize: 9, fontWeight: '700', color: colors.premium, marginLeft: 3 }}>
-                      PRO
-                    </Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>
-                  {description}
-                </Text>
-              </View>
-              
-              <ChevronRight size={18} color={colors.textMuted} style={{ marginLeft: 8 }} />
-            </View>
-          </View>
+          <Icon size={16} color="#22C55E" />
         </View>
-      </AnimatedButton>
-    </AnimatedCard>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, flex: 1 }}>
+          {label}
+        </Text>
+        <Crown size={14} color="#22C55E" />
+      </View>
+      
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {POSITION_OPTIONS.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            onPress={() => onChange(option.value)}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 8,
+              backgroundColor: value === option.value 
+                ? 'rgba(34, 197, 94, 0.2)' 
+                : colors.inputBg,
+              borderWidth: 1,
+              borderColor: value === option.value 
+                ? '#22C55E' 
+                : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: value === option.value ? '600' : '500',
+                color: value === option.value ? '#22C55E' : colors.textSecondary,
+              }}
+            >
+              {option.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
   );
 
-  // Show loading state
   if (isLoading || isLoadingProfile) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}
+      >
         <ActivityIndicator size="large" color={colors.accent} />
         <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Loading...</Text>
       </SafeAreaView>
@@ -431,14 +412,14 @@ export default function EditDesignScreen() {
             <ArrowLeft size={22} color={colors.text} />
           </View>
         </AnimatedButton>
-        
+
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Sparkles size={20} color={colors.accent} style={{ marginRight: 8 }} />
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: -0.3 }}>
             Edit Design
           </Text>
         </View>
-        
+
         <AnimatedButton onPress={handleSave} disabled={isSaving}>
           <LinearGradient
             colors={['#6366F1', '#8B5CF6']}
@@ -480,7 +461,6 @@ export default function EditDesignScreen() {
             flex: 1,
           }}
         >
-          {/* Animated indicator */}
           <Animated.View
             style={{
               position: 'absolute',
@@ -488,12 +468,14 @@ export default function EditDesignScreen() {
               bottom: 4,
               left: 4,
               width: '50%',
-              transform: [{
-                translateX: tabIndicatorAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 156], // Adjust based on tab width
-                }),
-              }],
+              transform: [
+                {
+                  translateX: tabIndicatorAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 156],
+                  }),
+                },
+              ],
             }}
           >
             <View
@@ -509,8 +491,8 @@ export default function EditDesignScreen() {
               }}
             />
           </Animated.View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={{ flex: 1, paddingVertical: 10, alignItems: 'center' }}
             onPress={() => setActiveTab('personal')}
             activeOpacity={0.7}
@@ -525,8 +507,8 @@ export default function EditDesignScreen() {
               Personal
             </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={{ flex: 1, paddingVertical: 10, alignItems: 'center' }}
             onPress={() => setActiveTab('business')}
             activeOpacity={0.7}
@@ -544,8 +526,8 @@ export default function EditDesignScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        style={{ flex: 1 }} 
+      <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
@@ -564,7 +546,7 @@ export default function EditDesignScreen() {
             >
               Customize Your Design
             </Text>
-            
+
             {/* Photo Upload Card */}
             <View
               style={{
@@ -579,8 +561,8 @@ export default function EditDesignScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity style={{ position: 'relative' }} onPress={handlePhotoUpload}>
                   {photo ? (
-                    <Image 
-                      source={{ uri: photo }} 
+                    <Image
+                      source={{ uri: photo }}
                       style={{
                         width: 72,
                         height: 72,
@@ -624,14 +606,12 @@ export default function EditDesignScreen() {
                     <Camera size={14} color="#FFFFFF" />
                   </View>
                 </TouchableOpacity>
-                
+
                 <View style={{ flex: 1, marginLeft: 16 }}>
                   <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 4 }}>
                     {activeTab === 'personal' ? 'Profile Photo' : 'Business Logo'}
                   </Text>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary }}>
-                    Tap to change • Max 5MB
-                  </Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary }}>Tap to change • Max 5MB</Text>
                 </View>
               </View>
             </View>
@@ -729,7 +709,7 @@ export default function EditDesignScreen() {
             >
               Live Preview
             </Text>
-            
+
             <View
               style={{
                 backgroundColor: colors.card,
@@ -754,7 +734,6 @@ export default function EditDesignScreen() {
                   backgroundColor: '#1F2937',
                 }}
               >
-                {/* Background gradient */}
                 <LinearGradient
                   colors={['#1F2937', '#111827', '#0F172A']}
                   start={{ x: 0, y: 0 }}
@@ -767,7 +746,7 @@ export default function EditDesignScreen() {
                     bottom: 0,
                   }}
                 />
-                
+
                 {/* Decorative elements */}
                 <View
                   style={{
@@ -815,50 +794,37 @@ export default function EditDesignScreen() {
                     </Text>
                   </View>
                 )}
-                
+
                 {/* Watermark - User Name Overlay */}
-                <View 
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+                <View
+                  style={getNameOverlayPositionStyle(IS_PREMIUM_ENABLED ? nameOverlayPosition : 'center')}
                   pointerEvents="none"
                 >
                   <Text
                     style={{
                       color: 'rgba(99, 102, 241, 0.7)',
-                      fontSize: 32,
+                      fontSize: nameOverlayPosition === 'center' ? 32 : 24,
                       fontWeight: '900',
-                      textAlign: 'center',
+                      textAlign: nameOverlayPosition === 'center' ? 'center' : 
+                               (nameOverlayPosition === 'top-left' || nameOverlayPosition === 'bottom-left') ? 'left' : 'right',
                       letterSpacing: 2,
                       textTransform: 'uppercase',
                       textShadowColor: 'rgba(99, 102, 241, 0.3)',
                       textShadowOffset: { width: 0, height: 3 },
                       textShadowRadius: 6,
                       paddingHorizontal: 16,
+                      maxWidth: nameOverlayPosition === 'center' ? undefined : 200,
                     }}
                     numberOfLines={2}
                   >
                     {name || 'Your Name'}
                   </Text>
                 </View>
-                
-                {/* User Info with animated pulsing glow */}
+
+                {/* User Avatar with animated pulsing glow - Dynamic Position */}
                 <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 16,
-                    left: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                  }}
+                  style={getAvatarPositionStyle(IS_PREMIUM_ENABLED ? avatarPosition : 'bottom-left')}
                 >
-                  {/* Animated pulsing glow container */}
                   <Animated.View
                     style={{
                       borderRadius: 24,
@@ -897,19 +863,118 @@ export default function EditDesignScreen() {
                       }}
                     >
                       {photo ? (
-                        <Image 
-                          source={{ uri: photo }} 
-                          style={{ width: '100%', height: '100%' }}
-                        />
+                        <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} />
                       ) : (
                         <User size={18} color="#FFFFFF" />
                       )}
                     </Animated.View>
                   </Animated.View>
                 </View>
+
+                {/* Premium Info Preview - Bottom Right (fixed position) */}
+                {IS_PREMIUM_ENABLED && (
+                  <View 
+                    style={{ 
+                      position: 'absolute', 
+                      bottom: 16, 
+                      right: 16, 
+                      alignItems: 'flex-end', 
+                      maxWidth: '60%' 
+                    }}
+                  >
+                    {/* Personal Tab Preview */}
+                    {activeTab === 'personal' && (aboutMe || email || phoneNumber || website) && (
+                      <View
+                        style={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          borderRadius: 10,
+                          padding: 10,
+                          borderWidth: 1,
+                          borderColor: 'rgba(99, 102, 241, 0.3)',
+                        }}
+                      >
+                        {aboutMe && (
+                          <Text
+                            style={{
+                              color: 'rgba(255, 255, 255, 0.9)',
+                              fontSize: 10,
+                              fontStyle: 'italic',
+                              marginBottom: (email || phoneNumber || website) ? 6 : 0,
+                              textAlign: 'right',
+                            }}
+                            numberOfLines={2}
+                          >
+                            "{aboutMe}"
+                          </Text>
+                        )}
+                        {email && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: phoneNumber || website ? 3 : 0 }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 9 }} numberOfLines={1}>
+                              {email}
+                            </Text>
+                            <Mail size={10} color="rgba(255, 255, 255, 0.5)" style={{ marginLeft: 4 }} />
+                          </View>
+                        )}
+                        {phoneNumber && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: website ? 3 : 0 }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 9 }} numberOfLines={1}>
+                              {phoneNumber}
+                            </Text>
+                            <Phone size={10} color="rgba(255, 255, 255, 0.5)" style={{ marginLeft: 4 }} />
+                          </View>
+                        )}
+                        {website && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 9 }} numberOfLines={1}>
+                              {website}
+                            </Text>
+                            <Globe size={10} color="rgba(255, 255, 255, 0.5)" style={{ marginLeft: 4 }} />
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Business Tab Preview */}
+                    {activeTab === 'business' && (companyAddress || registrationNumber) && (
+                      <View
+                        style={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          borderRadius: 10,
+                          padding: 10,
+                          borderWidth: 1,
+                          borderColor: 'rgba(99, 102, 241, 0.3)',
+                        }}
+                      >
+                        {companyAddress && (
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'flex-end', marginBottom: registrationNumber ? 6 : 0 }}>
+                            <Text
+                              style={{
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                fontSize: 9,
+                                textAlign: 'right',
+                                flex: 1,
+                              }}
+                              numberOfLines={2}
+                            >
+                              {companyAddress}
+                            </Text>
+                            <MapPin size={10} color="rgba(255, 255, 255, 0.5)" style={{ marginLeft: 4, marginTop: 1 }} />
+                          </View>
+                        )}
+                        {registrationNumber && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 9 }} numberOfLines={1}>
+                              {registrationNumber}
+                            </Text>
+                            <FileText size={10} color="rgba(255, 255, 255, 0.5)" style={{ marginLeft: 4 }} />
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
-              
-              {/* Preview hint */}
+
               <Text
                 style={{
                   fontSize: 12,
@@ -926,7 +991,9 @@ export default function EditDesignScreen() {
 
         {/* Premium Fields Section */}
         <View style={{ marginBottom: 24 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}
+          >
             <Text
               style={{
                 fontSize: 11,
@@ -938,55 +1005,415 @@ export default function EditDesignScreen() {
             >
               Premium Features
             </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 20,
-              }}
-            >
-              <Crown size={12} color={colors.premium} />
-              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.premium, marginLeft: 4 }}>
-                UPGRADE
-              </Text>
-            </View>
+            {IS_PREMIUM_ENABLED ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 20,
+                }}
+              >
+                <Crown size={12} color="#22C55E" />
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#22C55E', marginLeft: 4 }}>
+                  UNLOCKED
+                </Text>
+              </View>
+            ) : (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 20,
+                }}
+              >
+                <Crown size={12} color={colors.premium} />
+                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.premium, marginLeft: 4 }}>
+                  UPGRADE
+                </Text>
+              </View>
+            )}
           </View>
 
-          <LockedField
-            icon={User}
-            label="About Section"
-            description={activeTab === 'personal' 
-              ? "Add a personal tagline that appears on your quotes" 
-              : "Add your business tagline or mission statement"
-            }
-            delay={200}
-          />
+          {/* Personal Tab Premium Features */}
+          {activeTab === 'personal' && (
+            <>
+              {IS_PREMIUM_ENABLED ? (
+                <>
+                  {/* About Section - Unlocked */}
+                  <AnimatedCard delay={200}>
+                    <View
+                      style={{
+                        backgroundColor: colors.card,
+                        borderRadius: 16,
+                        padding: 16,
+                        marginBottom: 12,
+                        borderWidth: 1,
+                        borderColor: 'rgba(34, 197, 94, 0.3)',
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginRight: 10,
+                          }}
+                        >
+                          <User size={16} color="#22C55E" />
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                          About Section
+                        </Text>
+                        <Crown size={14} color="#22C55E" style={{ marginLeft: 8 }} />
+                      </View>
+                      <View
+                        style={{
+                          backgroundColor: colors.inputBg,
+                          borderRadius: 12,
+                          paddingHorizontal: 14,
+                        }}
+                      >
+                        <TextInput
+                          style={{
+                            paddingVertical: 14,
+                            fontSize: 15,
+                            color: colors.text,
+                            minHeight: 60,
+                          }}
+                          value={aboutMe}
+                          onChangeText={setAboutMe}
+                          placeholder="Add a personal tagline..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                        />
+                      </View>
+                    </View>
+                  </AnimatedCard>
 
-          <LockedField
-            icon={activeTab === 'personal' ? Mail : Phone}
-            label="Contact Details"
-            description="Include phone number, email, and website on your quotes"
-            delay={250}
-          />
+                  {/* Contact Details - Unlocked */}
+                  <AnimatedCard delay={250}>
+                    <View
+                      style={{
+                        backgroundColor: colors.card,
+                        borderRadius: 16,
+                        padding: 16,
+                        marginBottom: 12,
+                        borderWidth: 1,
+                        borderColor: 'rgba(34, 197, 94, 0.3)',
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginRight: 10,
+                          }}
+                        >
+                          <Mail size={16} color="#22C55E" />
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                          Contact Details
+                        </Text>
+                        <Crown size={14} color="#22C55E" style={{ marginLeft: 8 }} />
+                      </View>
 
+                      {/* Email Input */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.inputBg,
+                          borderRadius: 12,
+                          paddingHorizontal: 14,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <Mail size={16} color={colors.textSecondary} />
+                        <TextInput
+                          style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            fontSize: 14,
+                            color: colors.text,
+                          }}
+                          value={email}
+                          onChangeText={setEmail}
+                          placeholder="Email address"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                        />
+                      </View>
+
+                      {/* Phone Input */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.inputBg,
+                          borderRadius: 12,
+                          paddingHorizontal: 14,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <Phone size={16} color={colors.textSecondary} />
+                        <TextInput
+                          style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            fontSize: 14,
+                            color: colors.text,
+                          }}
+                          value={phoneNumber}
+                          onChangeText={setPhoneNumber}
+                          placeholder="Phone number"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="phone-pad"
+                        />
+                      </View>
+
+                      {/* Website Input */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.inputBg,
+                          borderRadius: 12,
+                          paddingHorizontal: 14,
+                        }}
+                      >
+                        <Globe size={16} color={colors.textSecondary} />
+                        <TextInput
+                          style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            fontSize: 14,
+                            color: colors.text,
+                          }}
+                          value={website}
+                          onChangeText={setWebsite}
+                          placeholder="Website URL"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="url"
+                          autoCapitalize="none"
+                        />
+                      </View>
+                    </View>
+                  </AnimatedCard>
+
+                  {/* Position Controls - Personal Tab */}
+                  <AnimatedCard delay={300}>
+                    <PositionSelector
+                      label="Name Overlay Position"
+                      icon={Type}
+                      value={nameOverlayPosition}
+                      onChange={setNameOverlayPosition}
+                    />
+                  </AnimatedCard>
+
+                  <AnimatedCard delay={350}>
+                    <PositionSelector
+                      label="Avatar Position"
+                      icon={Move}
+                      value={avatarPosition}
+                      onChange={setAvatarPosition}
+                    />
+                  </AnimatedCard>
+                </>
+              ) : (
+                <>
+                  <LockedField
+                    icon={User}
+                    label="About Section"
+                    description="Add a personal tagline that appears on your quotes"
+                    delay={200}
+                    onPress={handleUpgradeToPremium}
+                    isDark={isDark}
+                  />
+
+                  <LockedField
+                    icon={Mail}
+                    label="Contact Details"
+                    description="Include phone number, email, and website on your quotes"
+                    delay={250}
+                    onPress={handleUpgradeToPremium}
+                    isDark={isDark}
+                  />
+
+                  <LockedField
+                    icon={Move}
+                    label="Element Positioning"
+                    description="Customize the position of name overlay and avatar"
+                    delay={300}
+                    onPress={handleUpgradeToPremium}
+                    isDark={isDark}
+                  />
+                </>
+              )}
+            </>
+          )}
+
+          {/* Business Tab Premium Features */}
           {activeTab === 'business' && (
-            <LockedField
-              icon={Building2}
-              label="Organization Info"
-              description="Add company address, registration details, and more"
-              delay={300}
-            />
+            <>
+              {IS_PREMIUM_ENABLED ? (
+                <>
+                  <AnimatedCard delay={300}>
+                  <View
+                    style={{
+                      backgroundColor: colors.card,
+                      borderRadius: 16,
+                      padding: 16,
+                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(34, 197, 94, 0.3)',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginRight: 10,
+                        }}
+                      >
+                        <Building2 size={16} color="#22C55E" />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                        Organization Info
+                      </Text>
+                      <Crown size={14} color="#22C55E" style={{ marginLeft: 8 }} />
+                    </View>
+
+                    {/* Company Address Input */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'flex-start',
+                        backgroundColor: colors.inputBg,
+                        borderRadius: 12,
+                        paddingHorizontal: 14,
+                        paddingTop: 14,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <MapPin size={16} color={colors.textSecondary} style={{ marginTop: 2 }} />
+                      <TextInput
+                        style={{
+                          flex: 1,
+                          paddingBottom: 14,
+                          paddingHorizontal: 10,
+                          fontSize: 14,
+                          color: colors.text,
+                          minHeight: 60,
+                        }}
+                        value={companyAddress}
+                        onChangeText={setCompanyAddress}
+                        placeholder="Company address"
+                        placeholderTextColor={colors.textMuted}
+                        multiline
+                      />
+                    </View>
+
+                    {/* Registration Number Input */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: colors.inputBg,
+                        borderRadius: 12,
+                        paddingHorizontal: 14,
+                      }}
+                    >
+                      <FileText size={16} color={colors.textSecondary} />
+                      <TextInput
+                        style={{
+                          flex: 1,
+                          paddingVertical: 12,
+                          paddingHorizontal: 10,
+                          fontSize: 14,
+                          color: colors.text,
+                        }}
+                        value={registrationNumber}
+                        onChangeText={setRegistrationNumber}
+                        placeholder="Registration / GST number"
+                        placeholderTextColor={colors.textMuted}
+                      />
+                    </View>
+                  </View>
+                </AnimatedCard>
+
+                {/* Position Controls - Business Tab */}
+                <AnimatedCard delay={350}>
+                  <PositionSelector
+                    label="Name Overlay Position"
+                    icon={Type}
+                    value={nameOverlayPosition}
+                    onChange={setNameOverlayPosition}
+                  />
+                </AnimatedCard>
+
+                <AnimatedCard delay={400}>
+                  <PositionSelector
+                    label="Avatar Position"
+                    icon={Move}
+                    value={avatarPosition}
+                    onChange={setAvatarPosition}
+                  />
+                </AnimatedCard>
+                </>
+              ) : (
+                <>
+                  <LockedField
+                    icon={Building2}
+                    label="Organization Info"
+                    description="Add company address, registration details, and more"
+                    delay={300}
+                    onPress={handleUpgradeToPremium}
+                    isDark={isDark}
+                  />
+
+                  <LockedField
+                    icon={Move}
+                    label="Element Positioning"
+                    description="Customize the position of name overlay and avatar"
+                    delay={350}
+                    onPress={handleUpgradeToPremium}
+                    isDark={isDark}
+                  />
+                </>
+              )}
+            </>
           )}
         </View>
 
-        {/* Upgrade CTA */}
+        {/* Upgrade CTA / Premium Status */}
         <AnimatedCard delay={350}>
-          <AnimatedButton onPress={handleUpgradeToPremium}>
+          {IS_PREMIUM_ENABLED ? (
             <LinearGradient
-              colors={isDark ? ['#27272A', '#18181B'] : ['#FFFBEB', '#FEF3C7']}
+              colors={isDark ? ['#14532D', '#15803D'] : ['#DCFCE7', '#BBF7D0']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
@@ -994,7 +1421,7 @@ export default function EditDesignScreen() {
                 padding: 20,
                 marginBottom: 24,
                 borderWidth: 1,
-                borderColor: 'rgba(245, 158, 11, 0.3)',
+                borderColor: 'rgba(34, 197, 94, 0.4)',
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1003,28 +1430,70 @@ export default function EditDesignScreen() {
                     width: 52,
                     height: 52,
                     borderRadius: 16,
-                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.25)',
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: 16,
                   }}
                 >
-                  <Crown size={26} color={colors.premium} />
+                  <Crown size={26} color="#22C55E" />
                 </View>
-                
+
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
-                    Unlock All Features
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isDark ? '#FFFFFF' : '#15803D', marginBottom: 4 }}>
+                    Premium Active
                   </Text>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>
-                    Get contact details, about section, and unlimited customization
+                  <Text style={{ fontSize: 13, color: isDark ? 'rgba(255,255,255,0.8)' : '#166534', lineHeight: 18 }}>
+                    All features unlocked! Customize your quotes with full control.
                   </Text>
                 </View>
-                
-                <ChevronRight size={20} color={colors.textMuted} />
+
+                <Sparkles size={20} color="#22C55E" />
               </View>
             </LinearGradient>
-          </AnimatedButton>
+          ) : (
+            <AnimatedButton onPress={handleUpgradeToPremium}>
+              <LinearGradient
+                colors={isDark ? ['#27272A', '#18181B'] : ['#FFFBEB', '#FEF3C7']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  borderRadius: 20,
+                  padding: 20,
+                  marginBottom: 24,
+                  borderWidth: 1,
+                  borderColor: 'rgba(245, 158, 11, 0.3)',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 16,
+                      backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 16,
+                    }}
+                  >
+                    <Crown size={26} color={colors.premium} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+                      Unlock All Features
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>
+                      Get contact details, about section, and unlimited customization
+                    </Text>
+                  </View>
+
+                  <ChevronRight size={20} color={colors.textMuted} />
+                </View>
+              </LinearGradient>
+            </AnimatedButton>
+          )}
         </AnimatedCard>
       </ScrollView>
     </SafeAreaView>

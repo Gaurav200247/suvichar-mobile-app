@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  Pressable,
   Image,
   ScrollView,
   ImageBackground,
@@ -13,12 +12,12 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  User, 
-  Share2, 
-  Download, 
-  Palette, 
-  ChevronRight, 
+import {
+  User,
+  Share2,
+  Download,
+  Palette,
+  ChevronRight,
   RefreshCw,
   Crown,
 } from 'lucide-react-native';
@@ -31,101 +30,10 @@ import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../../../context/ThemeContext';
+import { AnimatedButton, CategoryPill } from '../../../components';
 
 // Storage key for showDate preference (must match edit-design.tsx)
 const SHOW_DATE_KEY = 'quote_show_date';
-
-// Animated Button Component
-const AnimatedButton = ({ 
-  onPress, 
-  children, 
-  style, 
-  className,
-  disabled = false,
-}: { 
-  onPress: () => void; 
-  children: React.ReactNode; 
-  style?: any;
-  className?: string;
-  disabled?: boolean;
-}) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    if (disabled) return;
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
-  };
-
-  return (
-    <Pressable 
-      onPress={onPress} 
-      onPressIn={handlePressIn} 
-      onPressOut={handlePressOut}
-      disabled={disabled}
-    >
-      <Animated.View 
-        style={[style, { transform: [{ scale: scaleAnim }], opacity: disabled ? 0.6 : 1 }]} 
-        className={className}
-      >
-        {children}
-      </Animated.View>
-    </Pressable>
-  );
-};
-
-// Category Pill Component
-const CategoryPill = ({ 
-  category, 
-  isSelected, 
-  onPress, 
-  isDark,
-}: { 
-  category: string; 
-  isSelected: boolean; 
-  onPress: () => void; 
-  isDark: boolean;
-}) => {
-  return (
-    <Pressable onPress={onPress}>
-      <View
-        style={{
-          backgroundColor: isSelected 
-            ? '#6366F1' 
-            : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
-          paddingHorizontal: 18,
-          paddingVertical: 10,
-          borderRadius: 20,
-          borderWidth: isSelected ? 0 : 1,
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: '600',
-            color: isSelected ? '#FFFFFF' : (isDark ? '#A1A1AA' : '#52525B'),
-          }}
-        >
-          {category}
-        </Text>
-      </View>
-    </Pressable>
-  );
-};
 
 export default function HomeScreen() {
   const { isDark } = useTheme();
@@ -140,7 +48,7 @@ export default function HomeScreen() {
   // Quote card animation
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Pulsing glow animation for photo frame
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
@@ -148,9 +56,9 @@ export default function HomeScreen() {
   const viewShotRef = useRef<ViewShot>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [showBranding, setShowBranding] = useState(true); // Controls watermark/user info visibility
+  const [showBranding, setShowBranding] = useState(true);
   const [hasMediaPermission, setHasMediaPermission] = useState(false);
-  const [showDate, setShowDate] = useState(true); // Controls date visibility on quote card
+  const [showDate, setShowDate] = useState(true);
 
   // Load showDate preference from SecureStore when screen comes into focus
   useFocusEffect(
@@ -169,7 +77,7 @@ export default function HomeScreen() {
     }, [])
   );
 
-  // Request media library permission on mount (iOS only - Android 10+ doesn't need it for saving)
+  // Request media library permission on mount
   useEffect(() => {
     const checkAndRequestPermission = async () => {
       if (Platform.OS === 'ios') {
@@ -181,7 +89,6 @@ export default function HomeScreen() {
           setHasMediaPermission(status === 'granted');
         }
       } else {
-        // Android 10+ doesn't require explicit permission for saving to MediaStore
         setHasMediaPermission(true);
       }
     };
@@ -228,7 +135,7 @@ export default function HomeScreen() {
     ]).start(() => {
       setCurrentQuoteIndex((prev) => (prev + 1) % QUOTES.length);
       slideAnim.setValue(30);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -245,25 +152,17 @@ export default function HomeScreen() {
     });
   };
 
-  // Download quote image to device (clean - without user branding)
   const handleDownload = async () => {
     if (isDownloading) return;
-    
+
     try {
       setIsDownloading(true);
-
-      // Hide branding for clean download
       setShowBranding(false);
-      
-      // Wait for state to update and re-render
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // Capture the view
       if (viewShotRef.current) {
         const uri = await viewShotRef.current.capture?.();
         if (uri) {
-          // On Android 10+, MediaLibrary.createAssetAsync doesn't require permission dialog
-          // On iOS, permission was already requested on mount
           if (Platform.OS === 'ios' && !hasMediaPermission) {
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
@@ -274,15 +173,13 @@ export default function HomeScreen() {
             }
             setHasMediaPermission(true);
           }
-          
-          // Save captured image directly to gallery
+
           const asset = await MediaLibrary.createAssetAsync(uri);
-          
-          // On iOS, also add to custom album
+
           if (Platform.OS === 'ios') {
             await MediaLibrary.createAlbumAsync('Suvichar', asset, false);
           }
-          
+
           Alert.alert('Saved! ✨', 'Image saved to gallery');
         }
       }
@@ -290,18 +187,17 @@ export default function HomeScreen() {
       console.error('Download error:', error);
       Alert.alert('Error', 'Failed to save. Please try again.');
     } finally {
-      setShowBranding(true); // Restore branding
+      setShowBranding(true);
       setIsDownloading(false);
     }
   };
 
-  // Share quote image
   const handleShare = async () => {
     if (isSharing) return;
-    
+
     try {
       setIsSharing(true);
-      
+
       if (viewShotRef.current) {
         const uri = await viewShotRef.current.capture?.();
         if (uri) {
@@ -323,37 +219,35 @@ export default function HomeScreen() {
   const userPhoto = user?.profileImageUrl;
 
   return (
-    <SafeAreaView 
+    <SafeAreaView
       className="flex-1"
       style={{ backgroundColor: isDark ? '#09090B' : '#FAFAFA' }}
     >
       {/* Header */}
-      <View 
+      <View
         className="flex-row justify-between items-center px-5 py-4"
-        style={{ 
+        style={{
           backgroundColor: isDark ? '#09090B' : '#FFFFFF',
           borderBottomWidth: 1,
           borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
         }}
       >
         <View className="flex-row items-center">
-          <View 
-            className="w-11 h-11 rounded-2xl items-center justify-center mr-3 overflow-hidden"
-          >
-            <Image 
-              source={require('../../../assets/app_icon.png')} 
+          <View className="w-11 h-11 rounded-2xl items-center justify-center mr-3 overflow-hidden">
+            <Image
+              source={require('../../../assets/app_icon.png')}
               style={{ width: 44, height: 44 }}
               resizeMode="cover"
             />
           </View>
           <View>
-            <Text 
+            <Text
               className="text-2xl font-bold"
               style={{ color: isDark ? '#FAFAFA' : '#18181B', letterSpacing: -0.5 }}
             >
               Suvichar
             </Text>
-            <Text 
+            <Text
               className="text-xs"
               style={{ color: isDark ? '#71717A' : '#A1A1AA', marginTop: 1 }}
             >
@@ -361,8 +255,8 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
-        
-        <AnimatedButton 
+
+        <AnimatedButton
           onPress={() => router.push('/(user)/(tabs)/profile')}
           style={{
             shadowColor: isDark ? '#000' : '#6366F1',
@@ -374,7 +268,7 @@ export default function HomeScreen() {
         >
           <View
             className="w-11 h-11 rounded-full justify-center items-center overflow-hidden"
-            style={{ 
+            style={{
               backgroundColor: isDark ? '#27272A' : '#F4F4F5',
               borderWidth: 2,
               borderColor: isDark ? '#3F3F46' : '#E4E4E7',
@@ -383,10 +277,7 @@ export default function HomeScreen() {
             {isLoadingProfile ? (
               <ActivityIndicator size="small" color={isDark ? '#A1A1AA' : '#71717A'} />
             ) : userPhoto ? (
-              <Image 
-                source={{ uri: userPhoto }} 
-                className="w-full h-full"
-              />
+              <Image source={{ uri: userPhoto }} className="w-full h-full" />
             ) : (
               <User size={20} color={isDark ? '#A1A1AA' : '#71717A'} />
             )}
@@ -397,18 +288,18 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Welcome Message */}
         <View className="px-5 pt-5 pb-2">
-          <Text 
-            style={{ 
-              fontSize: 15, 
+          <Text
+            style={{
+              fontSize: 15,
               color: isDark ? '#71717A' : '#71717A',
               fontWeight: '500',
             }}
           >
             Welcome back,
           </Text>
-          <Text 
-            style={{ 
-              fontSize: 22, 
+          <Text
+            style={{
+              fontSize: 22,
               color: isDark ? '#FAFAFA' : '#18181B',
               fontWeight: '700',
               marginTop: 2,
@@ -419,12 +310,52 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* Category Pills */}
-        <ScrollView 
-          horizontal 
+        {/* Category Tab Bar */}
+        <View
+          style={{
+            marginHorizontal: 20,
+            marginTop: 16,
+            marginBottom: 8,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: 12,
+            }}
+          >
+            <View
+              style={{
+                width: 4,
+                height: 16,
+                backgroundColor: '#6366F1',
+                borderRadius: 2,
+                marginRight: 10,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: isDark ? '#71717A' : '#71717A',
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+              }}
+            >
+              Categories
+            </Text>
+          </View>
+        </View>
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
-          className="py-4"
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          style={{ marginBottom: 16 }}
+          contentContainerStyle={{ 
+            paddingHorizontal: 20, 
+            gap: 10,
+            paddingVertical: 4,
+          }}
         >
           {HINDI_CATEGORIES.map((category, index) => (
             <CategoryPill
@@ -438,7 +369,7 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* Quote Template Card */}
-        <Animated.View 
+        <Animated.View
           className="mx-5 mb-5"
           style={{
             opacity: fadeAnim,
@@ -462,12 +393,11 @@ export default function HomeScreen() {
               className="w-full"
               style={{ height: 500 }}
             >
-
-              {/* Date Badge - conditionally shown based on user preference */}
+              {/* Date Badge */}
               {showDate && (
-                <View 
+                <View
                   className="absolute top-4 left-3 px-4 py-2 rounded-2xl"
-                  style={{ 
+                  style={{
                     backgroundColor: 'rgba(99, 102, 241, 0.85)',
                     shadowColor: '#6366F1',
                     shadowOffset: { width: 0, height: 2 },
@@ -483,7 +413,7 @@ export default function HomeScreen() {
               )}
 
               {/* Premium Badge */}
-              <View 
+              <View
                 className="absolute top-4 right-4 flex-row items-center px-3 py-2 rounded-xl"
                 style={{ backgroundColor: 'rgba(251, 191, 36, 0.9)' }}
               >
@@ -493,12 +423,9 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              {/* Watermark - User Name (only shown when branding is enabled) */}
+              {/* Watermark - User Name */}
               {showBranding && (
-                <View 
-                  className="absolute inset-0 items-center justify-center"
-                  pointerEvents="none"
-                >
+                <View className="absolute inset-0 items-center justify-center" pointerEvents="none">
                   <Text
                     style={{
                       color: 'rgba(99, 102, 241, 0.7)',
@@ -518,11 +445,10 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {/* User Info (only shown when branding is enabled) */}
+              {/* User Info */}
               {showBranding && (
                 <View className="absolute bottom-0 left-0 right-0 p-5">
                   <View className="flex-row items-center">
-                    {/* Animated pulsing glow container */}
                     <Animated.View
                       style={{
                         borderRadius: 32,
@@ -575,20 +501,18 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Action Buttons Row */}
-        <View 
-          style={{ 
-            flexDirection: 'row', 
+        <View
+          style={{
+            flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginHorizontal: 20, 
-            marginBottom: 24, 
+            marginHorizontal: 20,
+            marginBottom: 24,
           }}
         >
-          {/* Left: Icon Buttons (Edit, Download, Share) */}
+          {/* Left: Icon Buttons */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <AnimatedButton 
-              onPress={() => router.push('/(user)/edit-design')}
-            >
+            <AnimatedButton onPress={() => router.push('/(user)/edit-design')}>
               <View
                 style={{
                   width: 48,
@@ -605,10 +529,7 @@ export default function HomeScreen() {
               </View>
             </AnimatedButton>
 
-            <AnimatedButton 
-              onPress={handleDownload}
-              disabled={isDownloading}
-            >
+            <AnimatedButton onPress={handleDownload} disabled={isDownloading}>
               <View
                 style={{
                   width: 48,
@@ -630,10 +551,7 @@ export default function HomeScreen() {
               </View>
             </AnimatedButton>
 
-            <AnimatedButton 
-              onPress={handleShare}
-              disabled={isSharing}
-            >
+            <AnimatedButton onPress={handleShare} disabled={isSharing}>
               <View
                 style={{
                   width: 48,
@@ -657,7 +575,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Right: Next Quote Button */}
-          <AnimatedButton 
+          <AnimatedButton
             onPress={nextQuote}
             style={{
               shadowColor: '#6366F1',
@@ -689,7 +607,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Upgrade Banner */}
-        <AnimatedButton 
+        <AnimatedButton
           onPress={() => router.push('/(plans)/plans')}
           style={{ marginHorizontal: 20, marginBottom: 32 }}
         >
@@ -706,13 +624,13 @@ export default function HomeScreen() {
               borderColor: isDark ? '#3F3F46' : '#E4E4E7',
             }}
           >
-            <View 
-              style={{ 
-                width: 48, 
-                height: 48, 
-                borderRadius: 14, 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
                 marginRight: 14,
                 backgroundColor: 'rgba(251, 191, 36, 0.15)',
               }}
@@ -720,10 +638,10 @@ export default function HomeScreen() {
               <Crown size={24} color="#F59E0B" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text 
-                style={{ 
-                  fontSize: 15, 
-                  fontWeight: '700', 
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '700',
                   color: isDark ? '#FAFAFA' : '#18181B',
                   marginBottom: 3,
                 }}
