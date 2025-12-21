@@ -93,9 +93,6 @@ export default function EditDesignScreen() {
   // Tab animation
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
 
-  // Pulsing glow animation for photo frame in preview
-  const pulseAnim = useRef(new Animated.Value(0)).current;
-
   // Load user data and showDate preference on mount
   useEffect(() => {
     const loadData = async () => {
@@ -132,26 +129,6 @@ export default function EditDesignScreen() {
       friction: 20,
     }).start();
   }, [activeTab, tabIndicatorAnim]);
-
-  // Start pulsing glow animation
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [pulseAnim]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -821,32 +798,23 @@ export default function EditDesignScreen() {
                   </Text>
                 </View>
 
-                {/* User Avatar with animated pulsing glow - Dynamic Position */}
+                {/* User Avatar with glow effect - Dynamic Position */}
                 <View
                   style={getAvatarPositionStyle(IS_PREMIUM_ENABLED ? avatarPosition : 'bottom-left')}
                 >
-                  <Animated.View
+                  <View
                     style={{
                       borderRadius: 24,
                       padding: 3,
                       shadowColor: '#6366F1',
                       shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: pulseAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.4, 0.9],
-                      }),
-                      shadowRadius: pulseAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [6, 14],
-                      }),
+                      shadowOpacity: 0.6,
+                      shadowRadius: 10,
                       elevation: 6,
-                      backgroundColor: pulseAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['rgba(99, 102, 241, 0.2)', 'rgba(99, 102, 241, 0.4)'],
-                      }),
+                      backgroundColor: 'rgba(99, 102, 241, 0.3)',
                     }}
                   >
-                    <Animated.View
+                    <View
                       style={{
                         width: 40,
                         height: 40,
@@ -855,10 +823,7 @@ export default function EditDesignScreen() {
                         justifyContent: 'center',
                         alignItems: 'center',
                         borderWidth: 2,
-                        borderColor: pulseAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['rgba(255,255,255,0.5)', 'rgba(255,255,255,0.9)'],
-                        }),
+                        borderColor: 'rgba(255,255,255,0.7)',
                         backgroundColor: 'rgba(255,255,255,0.2)',
                       }}
                     >
@@ -867,8 +832,8 @@ export default function EditDesignScreen() {
                       ) : (
                         <User size={18} color="#FFFFFF" />
                       )}
-                    </Animated.View>
-                  </Animated.View>
+                    </View>
+                  </View>
                 </View>
 
                 {/* Premium Info Preview - Bottom Right (fixed position) */}
