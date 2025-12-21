@@ -1,0 +1,16 @@
+# Vercel deployment ignore file
+# Note: dist is gitignored but Vercel builds it during deployment
+
+# Ignore test files
+test/
+*.spec.ts
+*.e2e-spec.ts
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore documentation
+*.md
+!README.md
+

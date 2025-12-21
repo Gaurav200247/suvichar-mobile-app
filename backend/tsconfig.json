@@ -18,5 +18,5 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*", "models/**/*", "images.d.ts", "config/**/*", "api/**/*"]
+  "include": ["src/**/*", "models/**/*", "images.d.ts", "config/**/*"]
 }

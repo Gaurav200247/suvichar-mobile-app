@@ -15,7 +15,14 @@ config();
 
 const logger = new Logger('Bootstrap');
 
-async function bootstrap() {
+let cachedApp: NestExpressApplication | null = null;
+
+async function bootstrap(): Promise<NestExpressApplication> {
+  // Return cached app for serverless warm starts
+  if (cachedApp) {
+    return cachedApp;
+  }
+
   // Check for DATABASE_URL before doing anything
   if (!process.env.DATABASE_URL) {
     logger.error('═══════════════════════════════════════════════════════════');
@@ -55,13 +62,13 @@ async function bootstrap() {
 
   // Create NestJS application
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: ['log', 'error', 'debug', 'warn'],
+    logger: ['log', 'error', 'warn'],
   });
 
   app.setGlobalPrefix('api');
 
   const corsOptions: CorsOptions = {
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5173'],
+    origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   };
@@ -91,16 +98,39 @@ async function bootstrap() {
 
   // Welcome page for the root URL
   app.getHttpAdapter().get('/', (req, res: Response) => {
-    res.status(200).send('Welcome to NestJS Starter API');
+    res.status(200).json({
+      message: 'Welcome to NestJS API',
+      docs: '/api/swagger',
+      health: '/api',
+    });
   });
 
-  const PORT = parseInt(process.env.PORT) || 4000;
-
-  // Bind to 0.0.0.0 to accept connections from any network interface
-  await app.listen(PORT, '0.0.0.0');
-
-  // Log all available URLs including network IP
-  NetworkService.logServerUrls(PORT, logger);
+  await app.init();
+  cachedApp = app;
+  
+  return app;
 }
 
-bootstrap();
+// Check if running on Vercel (serverless)
+if (process.env.VERCEL) {
+  // Serverless mode - export handler
+  bootstrap().then((app) => {
+    const expressApp = app.getHttpAdapter().getInstance();
+    module.exports = expressApp;
+  });
+} else {
+  // Local development - start server
+  bootstrap().then((app) => {
+    const PORT = parseInt(process.env.PORT) || 4000;
+    app.listen(PORT, '0.0.0.0').then(() => {
+      NetworkService.logServerUrls(PORT, logger);
+    });
+  });
+}
+
+// Export for Vercel
+export default async function handler(req: any, res: any) {
+  const app = await bootstrap();
+  const expressApp = app.getHttpAdapter().getInstance();
+  return expressApp(req, res);
+}
