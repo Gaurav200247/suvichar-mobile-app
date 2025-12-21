@@ -87,7 +87,10 @@ export class AuthService {
       await this.otpRepository.save(otpToken);
 
       // Send OTP via Twilio
-      await this.twilioService.sendOTP(phoneNumber, otp);
+      this.twilioService.sendOTP(phoneNumber, otp);
+
+      console.log({otp});
+      
 
       return {
         error: false,

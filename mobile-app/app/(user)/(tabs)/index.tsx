@@ -77,20 +77,14 @@ export default function HomeScreen() {
     }, [])
   );
 
-  // Request media library permission on mount
+  // Request media library permission on mount (both iOS and Android)
   useEffect(() => {
     const checkAndRequestPermission = async () => {
-      if (Platform.OS === 'ios') {
-        const { status: existingStatus } = await MediaLibrary.getPermissionsAsync();
-        if (existingStatus === 'granted') {
-          setHasMediaPermission(true);
-        } else {
-          const { status } = await MediaLibrary.requestPermissionsAsync();
-          setHasMediaPermission(status === 'granted');
-        }
-      } else {
+      const { status: existingStatus } = await MediaLibrary.getPermissionsAsync();
+      if (existingStatus === 'granted') {
         setHasMediaPermission(true);
       }
+      // Don't auto-request on mount, let the download action trigger the request
     };
     checkAndRequestPermission();
   }, []);
@@ -163,10 +157,17 @@ export default function HomeScreen() {
       if (viewShotRef.current) {
         const uri = await viewShotRef.current.capture?.();
         if (uri) {
-          if (Platform.OS === 'ios' && !hasMediaPermission) {
+          // Request permission on both iOS and Android
+          if (!hasMediaPermission) {
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission Required', 'Please enable photo access in Settings to save images.');
+              Alert.alert(
+                'Permission Required', 
+                'Please enable photo library access in Settings to save images.',
+                [
+                  { text: 'OK', style: 'default' }
+                ]
+              );
               setIsDownloading(false);
               setShowBranding(true);
               return;
