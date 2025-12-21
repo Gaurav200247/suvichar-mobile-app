@@ -13,7 +13,25 @@ import { initializeDatabase } from './database';
 // Load environment variables first
 config();
 
-const logger = new Logger('Bootstrap');
+const isVercel = !!process.env.VERCEL;
+
+// Simple logger that works on Vercel (no ANSI colors)
+const logger = {
+  log: (message: string) => {
+    if (isVercel) {
+      console.log(`[Bootstrap] ${message}`);
+    } else {
+      new Logger('Bootstrap').log(message);
+    }
+  },
+  error: (message: string) => {
+    if (isVercel) {
+      console.error(`[Bootstrap] ${message}`);
+    } else {
+      new Logger('Bootstrap').error(message);
+    }
+  },
+};
 
 let cachedApp: NestExpressApplication | null = null;
 

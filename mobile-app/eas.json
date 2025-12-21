@@ -17,13 +17,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://suvichar-5ybokjbtd-gaurav200247s-projects.vercel.app"
+        "EXPO_PUBLIC_BASE_URL": "https://suvichar-app.vercel.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://suvichar-5ybokjbtd-gaurav200247s-projects.vercel.app"
+        "EXPO_PUBLIC_BASE_URL": "https://suvichar-app.vercel.app"
       }
     },
     "production-apk": {
@@ -32,7 +32,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://suvichar-5ybokjbtd-gaurav200247s-projects.vercel.app"
+        "EXPO_PUBLIC_BASE_URL": "https://suvichar-app.vercel.app"
       }
     }
   },

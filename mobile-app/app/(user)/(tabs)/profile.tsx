@@ -26,8 +26,8 @@ import { useRouter, Href } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppDispatch } from '../../../store/hooks';
 import { logout } from '../../../store/slices/authSlice';
-import { useLogoutMutation } from '../../../store/api/authApi';
-import { useGetUserProfileQuery } from '../../../store/api/userApi';
+import { useLogoutMutation, authApi } from '../../../store/api/authApi';
+import { useGetUserProfileQuery, userApi } from '../../../store/api/userApi';
 import { useTheme } from '../../../context/ThemeContext';
 import {
   AnimatedButton,
@@ -61,6 +61,9 @@ export default function ProfileScreen() {
             } catch (error) {
               // Continue with local logout even if API fails
             }
+            // Clear RTK Query caches to prevent stale data on next login
+            dispatch(userApi.util.resetApiState());
+            dispatch(authApi.util.resetApiState());
             dispatch(logout());
             router.replace('/(auth)/login' as Href);
           },
