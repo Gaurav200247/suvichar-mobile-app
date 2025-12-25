@@ -7,7 +7,7 @@
     "icon": "./assets/app_icon.png",
     "scheme": "suvichar",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/app_icon.png",
       "resizeMode": "contain",
@@ -35,6 +35,12 @@
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+        }
+      ],
       [
         "expo-media-library",
         {

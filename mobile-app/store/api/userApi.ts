@@ -57,10 +57,16 @@ export const userApi = createApi({
         }
         
         if (data.profileImage) {
+          // React Native requires this specific format for file uploads
+          // The 'as any' cast is needed because RN's FormData typing differs from web
+          const fileUri = data.profileImage.uri;
+          const fileType = data.profileImage.type || 'image/jpeg';
+          const fileName = data.profileImage.name || 'profile.jpg';
+          
           formData.append('profileImage', {
-            uri: data.profileImage.uri,
-            type: data.profileImage.type,
-            name: data.profileImage.name,
+            uri: fileUri,
+            type: fileType,
+            name: fileName,
           } as any);
         }
         
@@ -68,6 +74,8 @@ export const userApi = createApi({
           url: '/profile',
           method: 'PUT',
           body: formData,
+          // Don't set Content-Type header - let the runtime set it with boundary
+          formData: true,
         };
       },
       invalidatesTags: ['UserProfile'],
