@@ -87,7 +87,7 @@ export default function OTPScreen() {
         if (result.requiresProfileSetup) {
           router.replace('/(user)/purpose');
         } else {
-          router.replace('/(user)');
+          router.replace('/(user)/(tabs)');
         }
       }
     } catch (err: any) {

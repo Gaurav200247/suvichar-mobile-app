@@ -3,7 +3,6 @@ import { Animated, Pressable, PressableProps } from 'react-native';
 
 interface AnimatedTabBarButtonProps extends PressableProps {
   children: React.ReactNode;
-  onPress?: () => void;
 }
 
 export const AnimatedTabBarButton: React.FC<AnimatedTabBarButtonProps> = ({

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Briefcase, ArrowRight } from 'lucide-react-native';
-import { useRouter, Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useGetUserProfileQuery, useUpdateProfileMutation } from '../../store/api/userApi';
 import { useAppDispatch } from '../../store/hooks';
 import { setProfileSetupComplete } from '../../store/slices/authSlice';
@@ -36,7 +36,7 @@ export default function PurposeScreen() {
       // If user has name set, profile is complete - skip to home
       if (user.name && user.name.trim() !== '') {
         dispatch(setProfileSetupComplete());
-        router.replace('/(user)' as Href);
+        router.replace('/(user)/(tabs)');
         return;
       }
 
@@ -46,7 +46,7 @@ export default function PurposeScreen() {
 
   const handleSkip = () => {
     dispatch(setProfileSetupComplete());
-    router.replace('/(user)' as Href);
+    router.replace('/(user)/(tabs)');
   };
 
   const handleContinue = async () => {

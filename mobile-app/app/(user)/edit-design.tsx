@@ -157,7 +157,7 @@ export default function EditDesignScreen() {
   };
 
   const handleUpgradeToPremium = () => {
-    router.push('/plans');
+    router.push('/(plans)/plans');
   };
 
   const handlePhotoUpload = async () => {

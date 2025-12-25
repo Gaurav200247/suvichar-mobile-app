@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Camera, User, Check } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams, Href } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetUserProfileQuery, useUpdateProfileMutation } from '../../store/api/userApi';
 import { useAppDispatch } from '../../store/hooks';
 import { updateUser, setProfileSetupComplete } from '../../store/slices/authSlice';
@@ -63,7 +63,7 @@ export default function ProfileSetupScreen() {
       // If user has name set, profile is complete - skip to home (only in setup mode)
       if (user.name && user.name.trim() !== '') {
         dispatch(setProfileSetupComplete());
-        router.replace('/(user)' as Href);
+        router.replace('/(user)/(tabs)');
         return;
       }
       
@@ -192,7 +192,7 @@ export default function ProfileSetupScreen() {
           router.back();
         } else {
           // In setup mode, go to home
-          router.replace('/(user)' as Href);
+          router.replace('/(user)/(tabs)');
         }
       }
     } catch (err: any) {
@@ -203,7 +203,7 @@ export default function ProfileSetupScreen() {
 
   const handleSkip = () => {
     dispatch(setProfileSetupComplete());
-    router.replace('/(user)' as Href);
+    router.replace('/(user)/(tabs)');
   };
 
   const isValid = name.trim().length >= 2;
