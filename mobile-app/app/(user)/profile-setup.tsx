@@ -42,7 +42,11 @@ export default function ProfileSetupScreen() {
   const [hasError, setHasError] = useState(false);
 
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
-  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery();
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery(undefined, {
+    // Add retry logic for production
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+  });
 
   // Check for API errors
   useEffect(() => {
@@ -122,18 +126,32 @@ export default function ProfileSetupScreen() {
       setIsUploading(true);
       setError('');
 
-      // Request permissions
+      // Request permissions with error handling
       if (source === 'camera') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          setError('Camera permission is required to take photos');
+        try {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            setError('Camera permission is required to take photos');
+            setIsUploading(false);
+            return;
+          }
+        } catch (permError) {
+          console.error('Camera permission error:', permError);
+          setError('Unable to access camera. Please check app permissions in settings.');
           setIsUploading(false);
           return;
         }
       } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          setError('Gallery permission is required to select photos');
+        try {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            setError('Gallery permission is required to select photos');
+            setIsUploading(false);
+            return;
+          }
+        } catch (permError) {
+          console.error('Gallery permission error:', permError);
+          setError('Unable to access gallery. Please check app permissions in settings.');
           setIsUploading(false);
           return;
         }

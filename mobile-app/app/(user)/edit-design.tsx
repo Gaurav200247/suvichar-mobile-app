@@ -88,7 +88,11 @@ export default function EditDesignScreen() {
   const [avatarPosition, setAvatarPosition] = useState<PositionType>('bottom-left');
 
   // API hooks
-  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery();
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery(undefined, {
+    // Add retry logic for production
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+  });
   const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
 
   // Check for API errors
