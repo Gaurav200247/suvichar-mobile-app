@@ -19,9 +19,9 @@ import { updateUser, setProfileSetupComplete } from '../../store/slices/authSlic
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
 export default function ProfileSetupScreen() {
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
   const { isDark } = useTheme();
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -39,42 +39,59 @@ export default function ProfileSetupScreen() {
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
-  const { data: profileData, isLoading: isLoadingProfile } = useGetUserProfileQuery();
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery();
+
+  // Check for API errors
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile load error:', profileError);
+      setHasError(true);
+      setIsCheckingProfile(false);
+    }
+  }, [profileError]);
 
   // Check if user already has profile setup complete
   useEffect(() => {
     if (!isLoadingProfile && profileData?.user) {
       const user = profileData.user;
       
-      // In edit mode, pre-fill all data and don't redirect
-      if (isEditMode) {
-        if (user.name) {
-          setName(user.name);
+      try {
+        // In edit mode, pre-fill all data and don't redirect
+        if (isEditMode) {
+          if (user.name) {
+            setName(user.name);
+          }
+          if (user.profileImageUrl) {
+            setPhotoPreview(user.profileImageUrl);
+          }
+          setIsCheckingProfile(false);
+          return;
         }
+        
+        // If user has name set, profile is complete - skip to home (only in setup mode)
+        if (user.name && user.name.trim() !== '') {
+          dispatch(setProfileSetupComplete());
+          router.replace('/(user)/(tabs)');
+          return;
+        }
+        
+        // Pre-fill photo preview if exists (but don't set photo object for re-upload)
         if (user.profileImageUrl) {
           setPhotoPreview(user.profileImageUrl);
         }
+        
         setIsCheckingProfile(false);
-        return;
+      } catch (error) {
+        console.error('Error setting up profile data:', error);
+        setIsCheckingProfile(false);
       }
-      
-      // If user has name set, profile is complete - skip to home (only in setup mode)
-      if (user.name && user.name.trim() !== '') {
-        dispatch(setProfileSetupComplete());
-        router.replace('/(user)/(tabs)');
-        return;
-      }
-      
-      // Pre-fill photo preview if exists (but don't set photo object for re-upload)
-      if (user.profileImageUrl) {
-        setPhotoPreview(user.profileImageUrl);
-      }
-      
+    } else if (!isLoadingProfile && !profileError) {
       setIsCheckingProfile(false);
     }
-  }, [isLoadingProfile, profileData, dispatch, router, isEditMode]);
+  }, [isLoadingProfile, profileData, dispatch, router, isEditMode, profileError]);
 
   const isPersonal = purpose === 'personal' || profileData?.user?.accountType === 'personal';
 
@@ -207,6 +224,41 @@ export default function ProfileSetupScreen() {
   };
 
   const isValid = name.trim().length >= 2;
+
+  // Show error state
+  if (hasError) {
+    return (
+      <SafeAreaView
+        className="flex-1 items-center justify-center px-6"
+        style={{ backgroundColor: isDark ? '#0a0a0a' : '#fafafa' }}
+      >
+        <Text
+          className="text-xl font-bold mb-2"
+          style={{ color: isDark ? '#fff' : '#000' }}
+        >
+          Unable to Load Profile
+        </Text>
+        <Text
+          className="text-sm text-center mb-6"
+          style={{ color: isDark ? '#888' : '#666' }}
+        >
+          There was an error loading your profile data. Please check your connection and try again.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="px-6 py-3 rounded-xl"
+          style={{ backgroundColor: isDark ? '#fff' : '#000' }}
+        >
+          <Text
+            className="text-base font-semibold"
+            style={{ color: isDark ? '#000' : '#fff' }}
+          >
+            Go Back
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Show loading while checking profile
   if (isCheckingProfile || isLoadingProfile) {

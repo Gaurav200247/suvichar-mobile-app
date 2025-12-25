@@ -35,7 +35,7 @@ export default function Index() {
       return <Redirect href={'/(user)/purpose' as Href} />;
     }
     // Go to main user screen
-    return <Redirect href={'/(user)' as Href} />;
+    return <Redirect href={'/(user)/(tabs)' as Href} />;
   }
 
   // Not authenticated - go to login

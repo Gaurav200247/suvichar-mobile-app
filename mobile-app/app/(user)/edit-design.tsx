@@ -71,6 +71,7 @@ export default function EditDesignScreen() {
   } | null>(null);
   const [showDate, setShowDate] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   // Premium fields - Personal tab
   const [aboutMe, setAboutMe] = useState('');
@@ -87,8 +88,16 @@ export default function EditDesignScreen() {
   const [avatarPosition, setAvatarPosition] = useState<PositionType>('bottom-left');
 
   // API hooks
-  const { data: profileData, isLoading: isLoadingProfile } = useGetUserProfileQuery();
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery();
   const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
+
+  // Check for API errors
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile load error:', profileError);
+      setHasError(true);
+    }
+  }, [profileError]);
 
   // Tab animation
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
@@ -103,6 +112,8 @@ export default function EditDesignScreen() {
         }
       } catch (error) {
         console.error('Error loading showDate preference:', error);
+        // Set default if loading fails
+        setShowDate(true);
       }
     };
     loadData();
@@ -112,9 +123,13 @@ export default function EditDesignScreen() {
   useEffect(() => {
     if (!isLoadingProfile && profileData?.user) {
       const user = profileData.user;
-      setName(user.name || '');
-      setPhoto(user.profileImageUrl);
-      setActiveTab(user.accountType || 'personal');
+      try {
+        setName(user.name || '');
+        setPhoto(user.profileImageUrl);
+        setActiveTab(user.accountType || 'personal');
+      } catch (error) {
+        console.error('Error setting user data:', error);
+      }
       setIsLoading(false);
     } else if (!isLoadingProfile) {
       setIsLoading(false);
@@ -356,6 +371,26 @@ export default function EditDesignScreen() {
       >
         <ActivityIndicator size="large" color={colors.accent} />
         <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center', padding: 20 }}
+      >
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
+          Unable to Load
+        </Text>
+        <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 20 }}>
+          There was an error loading your profile. Please try again.
+        </Text>
+        <AnimatedButton onPress={() => router.back()}>
+          <View style={{ backgroundColor: colors.accent, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}>
+            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Go Back</Text>
+          </View>
+        </AnimatedButton>
       </SafeAreaView>
     );
   }

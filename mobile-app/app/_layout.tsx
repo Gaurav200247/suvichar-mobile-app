@@ -12,6 +12,7 @@ SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
   const { isDark } = useTheme();
+  useFrameworkReady();
   
   return (
     <>
@@ -28,8 +29,6 @@ function AppContent() {
 }
 
 export default function RootLayout() {
-  useFrameworkReady();
-
   return (
     <Provider store={store}>
       <ThemeProvider>

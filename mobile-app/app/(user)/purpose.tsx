@@ -24,25 +24,42 @@ export default function PurposeScreen() {
   const [selectedType, setSelectedType] = useState<AccountType | null>(null);
   const [error, setError] = useState('');
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
-  const { data: profileData, isLoading: isLoadingProfile } = useGetUserProfileQuery();
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useGetUserProfileQuery();
+
+  // Check for API errors
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile load error:', profileError);
+      setHasError(true);
+      setIsCheckingProfile(false);
+    }
+  }, [profileError]);
 
   // Check if user already has profile setup complete
   useEffect(() => {
     if (!isLoadingProfile && profileData?.user) {
       const user = profileData.user;
 
-      // If user has name set, profile is complete - skip to home
-      if (user.name && user.name.trim() !== '') {
-        dispatch(setProfileSetupComplete());
-        router.replace('/(user)/(tabs)');
-        return;
-      }
+      try {
+        // If user has name set, profile is complete - skip to home
+        if (user.name && user.name.trim() !== '') {
+          dispatch(setProfileSetupComplete());
+          router.replace('/(user)/(tabs)');
+          return;
+        }
 
+        setIsCheckingProfile(false);
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        setIsCheckingProfile(false);
+      }
+    } else if (!isLoadingProfile && !profileError) {
       setIsCheckingProfile(false);
     }
-  }, [isLoadingProfile, profileData, dispatch, router]);
+  }, [isLoadingProfile, profileData, dispatch, router, profileError]);
 
   const handleSkip = () => {
     dispatch(setProfileSetupComplete());
@@ -65,6 +82,41 @@ export default function PurposeScreen() {
       setError(err?.data?.message || 'Failed to set account type');
     }
   };
+
+  // Show error state
+  if (hasError) {
+    return (
+      <SafeAreaView
+        className="flex-1 items-center justify-center px-6"
+        style={{ backgroundColor: isDark ? '#0a0a0a' : '#fafafa' }}
+      >
+        <Text
+          className="text-xl font-bold mb-2"
+          style={{ color: isDark ? '#fff' : '#000' }}
+        >
+          Unable to Load
+        </Text>
+        <Text
+          className="text-sm text-center mb-6"
+          style={{ color: isDark ? '#888' : '#666' }}
+        >
+          There was an error loading your profile. Please check your connection and try again.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="px-6 py-3 rounded-xl"
+          style={{ backgroundColor: isDark ? '#fff' : '#000' }}
+        >
+          <Text
+            className="text-base font-semibold"
+            style={{ color: isDark ? '#000' : '#fff' }}
+          >
+            Go Back
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Show loading while checking profile
   if (isCheckingProfile || isLoadingProfile) {

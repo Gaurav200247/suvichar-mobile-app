@@ -74,8 +74,6 @@ export const userApi = createApi({
           url: '/profile',
           method: 'PUT',
           body: formData,
-          // Don't set Content-Type header - let the runtime set it with boundary
-          formData: true,
         };
       },
       invalidatesTags: ['UserProfile'],
